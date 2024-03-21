@@ -1,0 +1,7 @@
+.idea
+venv
+target_prod
+logs
+**.log
+*.egg-info
+__pychache__
