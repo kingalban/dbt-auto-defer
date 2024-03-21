@@ -38,7 +38,7 @@ Then it will call dbt with your original command, plus any relevant state relate
 **Note:** dbt expects the option `--state <path>` to have an argument,
 `dbt-auto-defer` expects no argument because it fills the path itself.
 
-### exampels
+### examples
 
 Here are a few examples comparing the command you enter with how dbt is called:
 
@@ -53,7 +53,6 @@ dbt run -s my_model
 dbt bad_command --not-an-option
 # dbt bad_command --not-an-option
 
-
 # Files are only fetched when needed
 dbt run -s my_model+ --state
 # files are fetched from git remote...
@@ -65,7 +64,7 @@ dbt run -s my_model+ --defer
 # dbt run -s my_model+ --state ./target_prod --defer
 
 # or even just --favor-state
-dbt run -s my_model+ --defer
+dbt run -s my_model+ --favor-state
 # files are fetched from git remote...
 # dbt run -s my_model+ --state ./target_prod --favor-state --defer
 ~~~

@@ -18,7 +18,7 @@ else:
 
 @click.group
 @click.pass_context
-@click.option("-b", "--branch", type=str, help="branch to get files from")
+@click.option("-b", "--branch", default="origin/gh-pages", help="branch to get files from")
 @click.option("-f", "--files", multiple=True, default=["docs/manifest.json"], help="files to output")
 @click.option("-o", "--out", default="target_prod", type=click.Path(exists=False), help="path to save file in")
 @click.option("-r", "--repo", default=".", type=click.Path(exists=True), help="path to repo root")
@@ -38,21 +38,30 @@ def cli(ctx, debug, **kwargs):
 def fetch_files(ctx):
     """Fetch the files from git and print the dir containing them"""
     log = ctx.obj["log"]
-    repo = Repo(ctx.obj["repo"])
+    repo = Repo(ctx.obj["repo"], search_parent_directories=True)
 
     if ctx.obj["fetch"]:
-        for remote in repo.remotes:
-            log(f"remote is: {remote!r}")
-            remote.fetch(ctx.obj["branch"].split("/")[-1])
+        if "/" not in ctx.obj["branch"]:
+            raise click.exceptions.BadOptionUsage(option_name="--branch",
+                                                  message="branch should specify a remote branch like "
+                                                          f"'origin/branch', not {ctx.obj['branch']}")
+        remote_name, _, branch_name = ctx.obj["branch"].partition("/")
+
+        remotes = [rem for rem in repo.remotes if rem.name == remote_name]
+
+        if not remotes:
+            raise click.exceptions.BadOptionUsage(option_name="--branch",
+                                                  message=f"Could not find remote {remote_name!r}")
+        remote = remotes[0]
+        log(f"{remote=!r}, {branch_name=!r}")
+        remote.fetch(branch_name)
 
     out_path = Path(ctx.obj["out"])
     out_path.mkdir(parents=True, exist_ok=True)
 
     for file in ctx.obj["files"]:
         log(f"outputting: {ctx.obj['branch']}:{file}")
-        Path(out_path, Path(file).name).write_text(
-            repo.git.show(f"{ctx.obj['branch']}:{file}")
-        )
+        Path(out_path, Path(file).name).write_text(repo.git.show(f"{ctx.obj['branch']}:{file}"))
     dir_name = click.format_filename(out_path.absolute())
     return dir_name
 
