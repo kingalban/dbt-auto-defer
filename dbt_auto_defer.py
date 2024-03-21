@@ -57,8 +57,8 @@ def fetch_files(ctx):
     return dir_name
 
 
-@click.pass_context
 @cli.command(context_settings={"ignore_unknown_options": True})
+@click.pass_context
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 @click.option("--state", default=False, is_flag=True, help="automatically fetch and use prod state")
 @click.option("--favor-state", default=False, is_flag=True)
