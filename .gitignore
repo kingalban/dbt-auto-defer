@@ -4,4 +4,5 @@ target_prod
 logs
 **.log
 *.egg-info
-__pychache__
+**/__pycache__
+build

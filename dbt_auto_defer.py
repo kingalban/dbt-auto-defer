@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-
+from typing import Any
 from git import Repo
 import click
+from click.core import ParameterSource
+import json
 import sys
+
+CONFIG_MARKER = ".config_from_file"
+CONFIG_OPTION = "config"
 
 # borrowed from https://github.com/asottile/awshelp
 if sys.platform == "win32":
@@ -16,21 +21,45 @@ else:
     from os import execvp
 
 
+class OptionDefaultFromConfig(click.Option):
+    def get_default(self, ctx: click.Context, call: bool = True) -> str:
+        if ctx.params[CONFIG_OPTION].exists():
+            if CONFIG_MARKER not in ctx.obj:
+                ctx.obj[CONFIG_MARKER] = json.loads(ctx.params[CONFIG_OPTION].read_text())
+            if self.name in ctx.obj[CONFIG_MARKER]:
+                return ctx.obj[CONFIG_MARKER][self.name]
+        return super().get_default(ctx, call)
+
+
 @click.group
 @click.pass_context
-@click.option("-b", "--branch", default="origin/gh-pages", help="branch to get files from")
-@click.option("-f", "--files", multiple=True, default=["docs/manifest.json"], help="files to output")
-@click.option("-o", "--out", default="target_prod", type=click.Path(exists=False), help="path to save file in")
-@click.option("-r", "--repo", default=".", type=click.Path(exists=True), help="path to repo root")
+@click.version_option(prog_name="dbt-auto-defer")
+@click.option(f"-{CONFIG_OPTION[0]}", f"--{CONFIG_OPTION}", required=False, default=".dbt-auto-defer.json",
+              type=click.Path(dir_okay=False, path_type=Path),
+              help="json file containing configurations, overwritten by the other options")
+@click.option("-b", "--branch", default="origin/gh-pages", help="branch to get files from", cls=OptionDefaultFromConfig)
+@click.option("-f", "--files", multiple=True, default=["docs/manifest.json"], help="files to output", cls=OptionDefaultFromConfig)
+@click.option("-o", "--out", default="target_prod", type=click.Path(exists=False), help="path to save file in", cls=OptionDefaultFromConfig)
+@click.option("-r", "--repo", default=".", type=click.Path(exists=True), help="path to repo root", cls=OptionDefaultFromConfig)
 @click.option("--fetch/--no-fetch", default=True, help="whether to first fetch the remote")
 @click.option("--debug/--no-debug", default=False, help="print all actions taken")
-def cli(ctx, debug, **kwargs):
+def cli(ctx, debug: bool, config: Path, **kwargs: Any) -> None:
     def log(*a, **k):
         if debug:
             click.echo(*a, **k, err=True)
 
-    ctx.obj.update(kwargs)
+    if ctx.get_parameter_source(CONFIG_OPTION) is not ParameterSource.DEFAULT \
+        and not config.exists():
+        click.echo(f"Specified config file '{config!s}' was not found!", err=True)
+
     ctx.obj["log"] = log
+    ctx.obj.update(kwargs)
+
+
+@cli.command()
+@click.pass_context
+def noop(ctx):
+    print(ctx.obj)
 
 
 @cli.command()

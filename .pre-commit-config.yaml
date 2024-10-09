@@ -10,3 +10,8 @@ repos:
     rev: v0.3.3
     hooks:
       - id: ruff
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'd4911cfb7f1'
+    hooks:
+     - id: mypy
