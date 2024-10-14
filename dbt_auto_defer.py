@@ -23,7 +23,7 @@ else:
 
 class OptionDefaultFromConfig(click.Option):
     def get_default(self, ctx: click.Context, call: bool = True) -> str:
-        if ctx.params[CONFIG_OPTION].exists():
+        if CONFIG_OPTION in ctx.params and ctx.params[CONFIG_OPTION].exists():
             if CONFIG_MARKER not in ctx.obj:
                 ctx.obj[CONFIG_MARKER] = json.loads(ctx.params[CONFIG_OPTION].read_text())
             if self.name in ctx.obj[CONFIG_MARKER]:
@@ -58,12 +58,6 @@ def cli(ctx, debug: bool, config: Path, **kwargs: Any) -> None:
 
 @cli.command()
 @click.pass_context
-def noop(ctx):
-    print(ctx.obj)
-
-
-@cli.command()
-@click.pass_context
 def fetch_files(ctx):
     """Fetch the files from git and print the dir containing them"""
     log = ctx.obj["log"]
@@ -73,15 +67,16 @@ def fetch_files(ctx):
         if "/" not in ctx.obj["branch"]:
             raise click.exceptions.BadOptionUsage(option_name="--branch",
                                                   message="branch should specify a remote branch like "
-                                                          f"'origin/branch', not {ctx.obj['branch']}")
+                                                          f"'<remote-name>/<branch-name>', not {ctx.obj['branch']!r}.\n"
+                                                          f"If you're not fetching from a remote, specify '--no-fetch'")
         remote_name, _, branch_name = ctx.obj["branch"].partition("/")
 
-        remotes = [rem for rem in repo.remotes if rem.name == remote_name]
-
-        if not remotes:
+        try:
+            remote = repo.remote(remote_name)
+        except ValueError:
             raise click.exceptions.BadOptionUsage(option_name="--branch",
                                                   message=f"Could not find remote {remote_name!r}")
-        remote = remotes[0]
+
         log(f"{remote=!r}, {branch_name=!r}")
         remote.fetch(branch_name)
 
