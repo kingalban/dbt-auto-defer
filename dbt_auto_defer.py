@@ -31,7 +31,7 @@ class OptionDefaultFromConfig(click.Option):
         return super().get_default(ctx, call)
 
 
-@click.group
+@click.group(context_settings={'show_default': True})
 @click.pass_context
 @click.version_option(prog_name="dbt-auto-defer")
 @click.option(f"-{CONFIG_OPTION[0]}", f"--{CONFIG_OPTION}", required=False, default=".dbt-auto-defer.json",
